@@ -2,56 +2,96 @@ version: 2
 
 models:
   - name: metricflow_time_spine
-    description: Daily calendar used by the Semantic Layer for time-based metric queries.
+    description: Daily calendar spanning the prior ten calendar years through the end of the current calendar year, used by the Semantic Layer for time-based metric queries.
     time_spine:
       standard_granularity_column: date_day
     columns:
       - name: date_day
-        description: Calendar date at daily grain.
+        description: Calendar date at daily grain; each date appears once in the time spine.
         granularity: day
 
-
   - name: incremental_leads
-    description: Active Salesforce leads, incrementally merged by Salesforce lead ID.
+    description: Active, unconverted Salesforce leads incrementally merged by Salesforce lead ID. Each row represents the current state of one eligible lead.
     columns:
       - name: lead_id
-        description: Primary key for the Salesforce lead.
+        description: Salesforce lead identifier and primary key for this model.
         data_tests:
-          - unique
-          - not_null
+          - unique:
+              description: Confirms that each active Salesforce lead is represented once.
+          - not_null:
+              description: Confirms that every active Salesforce lead has an identifier.
+      - name: first_name
+        description: Lead's recorded first name in Salesforce.
+      - name: last_name
+        description: Lead's recorded last name in Salesforce.
+      - name: title
+        description: Lead's job title recorded in Salesforce.
+      - name: company
+        description: Company name associated with the lead in Salesforce.
       - name: email
-        description: Lead email address used to match Shopify customer activity.
+        description: Lead email address, used after normalization to match Shopify customer activity.
+      - name: phone
+        description: Lead's recorded phone number in Salesforce.
+      - name: street
+        description: Street-address portion of the lead's mailing address.
+      - name: city
+        description: City portion of the lead's mailing address.
+      - name: state
+        description: State, province, or region portion of the lead's mailing address.
+      - name: postal_code
+        description: Postal or ZIP code portion of the lead's mailing address.
+      - name: country
+        description: Country portion of the lead's mailing address.
+      - name: created_date
+        description: Timestamp when Salesforce created the lead record.
       - name: last_modified_date
-        description: Timestamp used to identify new or updated leads during incremental runs.
+        description: Timestamp when Salesforce most recently modified the lead record; incremental runs use this field to identify changed records.
+      - name: lead_source
+        description: Salesforce attribution value identifying how the lead originated.
+      - name: status
+        description: Current lifecycle status assigned to the lead in Salesforce.
+      - name: industry
+        description: Industry classification recorded for the lead's company.
 
   - name: shopify_transactions
-    description: Shopify orders enriched with the associated customer email and name, at one row per order.
+    description: Shopify orders enriched with associated customer attributes, excluding Fivetran-deleted records. Each row represents one Shopify order.
     semantic_model:
       enabled: true
     agg_time_dimension: order_created_at
     columns:
       - name: transaction_id
-        description: Primary key for the Shopify order.
+        description: Shopify order identifier and primary key for this model.
         entity:
           type: primary
           name: transaction
         data_tests:
-          - unique
-          - not_null
+          - unique:
+              description: Confirms that each Shopify order appears only once.
+          - not_null:
+              description: Confirms that every Shopify order has an identifier.
       - name: customer_id
-        description: Shopify customer identifier associated with the order when available.
+        description: Shopify customer identifier associated with the order, when available.
         entity:
           type: foreign
           name: customer
         data_tests:
           - relationships:
+              description: Confirms that populated order customer identifiers correspond to a Shopify customer record.
               arguments:
                 to: "{{ source('shopify', 'customer') }}"
                 field: id
       - name: customer_email
-        description: Normalized customer email used to associate purchase activity with Salesforce leads.
+        description: Lowercased and trimmed email address for the customer associated with the order; used to match purchase activity to Salesforce leads.
+      - name: customer_first_name
+        description: First name of the customer associated with the order.
+      - name: customer_last_name
+        description: Last name of the customer associated with the order.
+      - name: order_number
+        description: Shopify's sequential order number, which may be more recognizable to business users than the internal order ID.
+      - name: order_name
+        description: Display name assigned to the Shopify order.
       - name: order_created_at
-        description: Timestamp when the order was created.
+        description: Timestamp when the customer created the order in Shopify.
         granularity: day
         dimension:
           type: time
@@ -61,7 +101,7 @@ models:
         dimension:
           type: time
       - name: financial_status
-        description: Financial status recorded for the order.
+        description: Financial payment status recorded for the order.
         dimension:
           type: categorical
       - name: fulfillment_status
@@ -69,9 +109,15 @@ models:
         dimension:
           type: categorical
       - name: currency
-        description: ISO currency code for the order amounts.
+        description: ISO currency code used for the order amounts.
         dimension:
           type: categorical
+      - name: total_price
+        description: Total order amount in the order currency, before any downstream aggregation.
+      - name: total_tax
+        description: Total tax amount charged on the order in the order currency.
+      - name: total_discounts
+        description: Total discount amount applied to the order in the order currency.
     metrics:
       - name: order_count
         description: Count of Shopify orders.
@@ -80,73 +126,99 @@ models:
         agg: count
         expr: 1
       - name: total_revenue
-        description: Sum of Shopify order total price.
+        description: Sum of Shopify order total price in the order currency.
         label: Total Revenue
         type: simple
         agg: sum
         expr: total_price
       - name: average_order_value
-        description: Average Shopify order total price.
+        description: Average Shopify order total price in the order currency.
         label: Average Order Value
         type: simple
         agg: average
         expr: total_price
 
   - name: master_leads
-    description: Lead-grain mart that combines active Salesforce lead attributes with Shopify purchase history matched on normalized email.
+    description: Lead-grain mart combining active Salesforce lead attributes with Shopify purchase history matched on normalized email. Each row represents one active, unconverted Salesforce lead.
     semantic_model:
       enabled: true
     agg_time_dimension: created_date
     columns:
       - name: lead_id
-        description: Primary key for the lead-grain mart.
+        description: Salesforce lead identifier and primary key for the lead-grain mart.
         entity:
           type: primary
           name: lead
         data_tests:
-          - unique
-          - not_null
+          - unique:
+              description: Confirms that each active lead appears only once in the mart.
+          - not_null:
+              description: Confirms that every mart row has a Salesforce lead identifier.
+      - name: first_name
+        description: Lead's recorded first name in Salesforce.
+      - name: last_name
+        description: Lead's recorded last name in Salesforce.
+      - name: title
+        description: Lead's job title recorded in Salesforce.
+      - name: company
+        description: Company name associated with the lead in Salesforce.
+      - name: email
+        description: Lead email address used, after normalization, to match Shopify purchase history.
+      - name: phone
+        description: Lead's recorded phone number in Salesforce.
+      - name: street
+        description: Street-address portion of the lead's mailing address.
+      - name: city
+        description: City portion of the lead's mailing address.
+      - name: state
+        description: State, province, or region portion of the lead's mailing address.
+      - name: postal_code
+        description: Postal or ZIP code portion of the lead's mailing address.
+      - name: country
+        description: Country portion of the lead's mailing address.
+        dimension:
+          type: categorical
       - name: created_date
-        description: Timestamp when the Salesforce lead was created.
+        description: Timestamp when Salesforce created the lead record.
         granularity: day
         dimension:
           type: time
       - name: last_modified_date
-        description: Timestamp when the Salesforce lead was most recently modified.
+        description: Timestamp when Salesforce most recently modified the lead record.
         granularity: day
         dimension:
           type: time
       - name: lead_source
-        description: Salesforce source that originated the lead.
+        description: Salesforce attribution value identifying how the lead originated.
         dimension:
           type: categorical
       - name: status
-        description: Current Salesforce lead status.
+        description: Current lifecycle status assigned to the lead in Salesforce.
         dimension:
           type: categorical
       - name: industry
-        description: Industry recorded for the lead.
-        dimension:
-          type: categorical
-      - name: country
-        description: Country recorded for the lead.
+        description: Industry classification recorded for the lead's company.
         dimension:
           type: categorical
       - name: has_purchase_history
-        description: Whether the matched Shopify customer has at least one transaction.
+        description: Whether a Shopify customer with the lead's normalized email has at least one non-deleted order.
         dimension:
           type: categorical
+      - name: first_purchase_at
+        description: Timestamp of the earliest Shopify order for the customer matched to the lead's normalized email; null when no purchase history exists.
+      - name: most_recent_purchase_at
+        description: Timestamp of the latest Shopify order for the customer matched to the lead's normalized email; null when no purchase history exists.
       - name: lifetime_value
-        description: Sum of Shopify order total price for the matched customer email.
+        description: Sum of Shopify order total price for the customer matched to the lead's normalized email; zero when no purchase history exists.
     metrics:
       - name: lead_count
-        description: Count of active Salesforce leads.
+        description: Count of active, unconverted Salesforce leads.
         label: Lead Count
         type: simple
         agg: count
         expr: 1
       - name: purchaser_lead_count
-        description: Count of active leads with matched Shopify purchase history.
+        description: Count of active leads with at least one Shopify order matched by normalized email.
         label: Purchaser Lead Count
         type: simple
         agg: count

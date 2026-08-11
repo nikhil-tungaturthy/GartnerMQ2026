@@ -6,42 +6,53 @@ sources:
     schema: salesforce_sandbox_ts_census
     tables:
       - name: lead
-        description: Salesforce leads, including active and converted records.
+        description: Salesforce lead records, including active, converted, and deleted records; downstream models retain only active, unconverted leads.
         columns:
           - name: id
-            description: Primary key for the Salesforce lead.
+            description: Salesforce lead identifier and primary key for the source table.
             data_tests:
-              - unique
-              - not_null
+              - unique:
+                  description: Confirms that each Salesforce lead identifier is represented once in the replicated source.
+              - not_null:
+                  description: Confirms that every replicated Salesforce lead has an identifier.
       - name: opportunityHistory
+        description: Historical field-value changes recorded against Salesforce opportunities.
       - name: account
+        description: Salesforce account records representing organizations or households.
       - name: user
+        description: Salesforce user records for people with access to the CRM.
       - name: fivetran_formula_model
+        description: Fivetran-managed metadata table supporting replicated Salesforce formula fields.
 
   - name: shopify
     description: Shopify commerce data replicated by Fivetran.
     tables:
       - name: ORDER
-        description: Shopify orders at one row per order.
+        description: Shopify order records at one row per order, including Fivetran-deleted records that downstream models filter out.
         quoting:
           identifier: true
         columns:
           - name: id
-            description: Primary key for the Shopify order.
+            description: Shopify's internal order identifier and primary key for the source table.
             data_tests:
-              - unique
-              - not_null
+              - unique:
+                  description: Confirms that each Shopify order identifier is represented once in the replicated source.
+              - not_null:
+                  description: Confirms that every replicated Shopify order has an identifier.
       - name: customer
-        description: Shopify customers at one row per customer.
+        description: Shopify customer records at one row per customer, including Fivetran-deleted records that downstream models filter out.
         columns:
           - name: id
-            description: Primary key for the Shopify customer.
+            description: Shopify's internal customer identifier and primary key for the source table.
             data_tests:
-              - unique
-              - not_null
+              - unique:
+                  description: Confirms that each Shopify customer identifier is represented once in the replicated source.
+              - not_null:
+                  description: Confirms that every replicated Shopify customer has an identifier.
 
   - name: google_analytics
     description: Google Analytics event logs.
     database: snowflake_demo_01
     tables:
       - name: log
+        description: Raw Google Analytics event logs replicated to Snowflake.
