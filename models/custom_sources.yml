@@ -1,0 +1,22 @@
+version: 2
+    
+sources:
+  - name: salesforce
+    schema: salesforce_sandbox_ts_census
+    tables: 
+      - name: lead
+      - name: opportunityHistory
+      - name: account
+      - name: user
+      - name: fivetran_formula_model
+  - name: shopify
+    tables:
+      - name: ORDER
+        quoting:
+          identifier: True
+      - name: customer
+  - name: google_analytics
+    database: snowflake_demo_01
+    tables:
+      - name: log
+
