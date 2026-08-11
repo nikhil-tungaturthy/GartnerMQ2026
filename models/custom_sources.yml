@@ -1,22 +1,47 @@
 version: 2
-    
+
 sources:
   - name: salesforce
+    description: Salesforce CRM data replicated from the sandbox environment.
     schema: salesforce_sandbox_ts_census
-    tables: 
+    tables:
       - name: lead
+        description: Salesforce leads, including active and converted records.
+        columns:
+          - name: id
+            description: Primary key for the Salesforce lead.
+            data_tests:
+              - unique
+              - not_null
       - name: opportunityHistory
       - name: account
       - name: user
       - name: fivetran_formula_model
+
   - name: shopify
+    description: Shopify commerce data replicated by Fivetran.
     tables:
       - name: ORDER
+        description: Shopify orders at one row per order.
         quoting:
-          identifier: True
+          identifier: true
+        columns:
+          - name: id
+            description: Primary key for the Shopify order.
+            data_tests:
+              - unique
+              - not_null
       - name: customer
+        description: Shopify customers at one row per customer.
+        columns:
+          - name: id
+            description: Primary key for the Shopify customer.
+            data_tests:
+              - unique
+              - not_null
+
   - name: google_analytics
+    description: Google Analytics event logs.
     database: snowflake_demo_01
     tables:
       - name: log
-
