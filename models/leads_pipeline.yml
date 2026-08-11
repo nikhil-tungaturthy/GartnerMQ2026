@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: incremental_leads
+    description: Active Salesforce leads, incrementally merged by Salesforce lead ID.
+    columns:
+      - name: lead_id
+        description: Primary key for the Salesforce lead.
+        data_tests:
+          - unique
+          - not_null
+      - name: email
+        description: Lead email address used to match Shopify customer activity.
+      - name: last_modified_date
+        description: Timestamp used to identify new or updated leads during incremental runs.
+
+  - name: shopify_transactions
+    description: Shopify orders enriched with the associated customer email and name, at one row per order.
+    columns:
+      - name: transaction_id
+        description: Primary key for the Shopify order.
+        data_tests:
+          - unique
+          - not_null
+      - name: customer_id
+        description: Shopify customer identifier associated with the order when available.
+        data_tests:
+          - relationships:
+              arguments:
+                to: "{{ source('shopify', 'customer') }}"
+                field: id
+      - name: customer_email
+        description: Normalized customer email used to associate purchase activity with Salesforce leads.
+
+  - name: master_leads
+    description: Lead-grain mart that combines active Salesforce lead attributes with Shopify purchase history matched on normalized email.
+    columns:
+      - name: lead_id
+        description: Primary key for the lead-grain mart.
+        data_tests:
+          - unique
+          - not_null
+      - name: has_purchase_history
+        description: Whether the matched Shopify customer has at least one transaction.
+      - name: lifetime_value
+        description: Sum of Shopify order total price for the matched customer email.
