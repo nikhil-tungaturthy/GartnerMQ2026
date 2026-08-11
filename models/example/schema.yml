@@ -1,21 +1,24 @@
-
 version: 2
 
 models:
-    - name: my_first_dbt_model
-      description: "A starter dbt model"
-      columns:
-          - name: id
-            description: "The primary key for this table"
-            tests:
-                - unique
-                - not_null
+  - name: my_first_dbt_model
+    description: Starter model that materializes a single non-null example identifier for validating the project setup.
+    columns:
+      - name: id
+        description: Example identifier retained after filtering out the intentionally generated null record.
+        data_tests:
+          - unique:
+              description: Confirms that the starter model returns no duplicate identifiers.
+          - not_null:
+              description: Confirms that the starter model filters out null identifiers.
 
-    - name: my_second_dbt_model
-      description: "A starter dbt model"
-      columns:
-          - name: id
-            description: "The primary key for this table"
-            tests:
-                - unique
-                - not_null
+  - name: my_second_dbt_model
+    description: Starter downstream model that selects the example identifier from `my_first_dbt_model`.
+    columns:
+      - name: id
+        description: Example identifier inherited from `my_first_dbt_model`.
+        data_tests:
+          - unique:
+              description: Confirms that the downstream starter model returns no duplicate identifiers.
+          - not_null:
+              description: Confirms that the downstream starter model returns an identifier.
